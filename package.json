@@ -1,0 +1,38 @@
+{
+  "name": "@compforge/ts-stdx",
+  "version": "0.1.0",
+  "description": "Small TypeScript standard-library extensions",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/compforge/ts-stdx.git"
+  },
+  "exports": {
+    "./iter": {
+      "types": "./dist/iter/index.d.ts",
+      "import": "./dist/iter/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "fix": "prettier --write .",
+    "lint": "prettier --check . && tsc --noEmit -p tsconfig.json && tsc -p tsconfig.test.json",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10",
+    "typescript": "^7.0.2"
+  }
+}
