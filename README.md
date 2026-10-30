@@ -40,6 +40,49 @@ An optional second argument forwards an `AbortSignal` to every loader invocation
 
 The behavior follows [go-stdx's loading iterator](https://github.com/compforge/go-stdx/pull/31), expressed through native TypeScript async iteration.
 
+## Keyed set
+
+`KeyedSet<T, K = string>` identifies members by a caller-selected key instead of
+object reference. Import from `@compforge/ts-stdx/collections`:
+
+```ts
+import { KeyedSet } from "@compforge/ts-stdx/collections";
+
+type PersonRef = { readonly uid: string; name: string };
+const people = new KeyedSet<PersonRef>(
+  (person) => person.uid,
+  [{ uid: "a", name: "Alice" }],
+);
+people.add({ uid: "a", name: "Updated Alice" });
+people.has({ uid: "a", name: "Another instance" }); // true
+people.size; // 1
+
+const other = new KeyedSet<PersonRef>(
+  (person) => person.uid,
+  [{ uid: "a", name: "Different metadata" }],
+);
+people.equals(other); // true: same keys
+```
+
+- Supports `add`, `has`, `delete`, `clear`, `size`, `forEach`, and native iteration.
+  `keys()` returns members and `entries()` returns `[member, member]`, as with Set.
+- Unlike native Set, `add` replaces the member with the same key. It preserves that
+  key's original insertion position; deleting and re-adding moves it to the end.
+  Traversal follows native Map's live iteration behavior.
+- Keys follow native Map equality (SameValueZero). String and number keys compare
+  by value; object keys still compare by reference. Keep a member's selected key
+  stable while stored, and use the same key semantics for sets compared with `equals`.
+  Selector functions need not be the same function instance.
+- `equals` compares stored keys, ignoring iteration order and non-key fields. It
+  does not compare the full member bodies. Operations do not clone members.
+- `ReadonlySet<T>` is available as a read-only TypeScript view; the collection is
+  not a native Set instance. No native Set algebra methods are provided.
+- JSON and cloning boundaries belong to the caller: encode `[...people]`, validate
+  the decoded members, and reconstruct `new KeyedSet(keyOf, members)`. Direct JSON
+  serialization or `structuredClone` does not preserve this custom collection.
+  For a stable fingerprint, sort the encoded keys or members explicitly; traversal
+  order is not collection identity.
+
 ## Development
 
 Use Node.js 22+ and npm:
@@ -53,4 +96,4 @@ npm pack --dry-run
 ```
 
 Checks run across the complete component. `make lint` checks formatting, implementation types and public API type cases.
-`make test` builds the package and runs Node's test runner. `npm pack` builds ESM and type declarations; the package exports the `./iter` subpath.
+`make test` builds the package and runs Node's test runner. `npm pack` builds ESM and type declarations; the package exports the `./iter` and `./collections` subpaths.
