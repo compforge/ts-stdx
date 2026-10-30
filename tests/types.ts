@@ -31,3 +31,27 @@ const resolved: AsyncGenerator<number, void, unknown> = loadingIterator(
   }),
 );
 void resolved;
+
+import { KeyedSet } from "../src/collections/index.js";
+
+type PersonRef = { readonly uid: string; name?: string };
+const people: KeyedSet<PersonRef> = new KeyedSet((ref) => ref.uid);
+people.add({ uid: "a" }).add({ uid: "b", name: "B" });
+const readOnly: ReadonlySet<PersonRef> = people;
+const iterable: Iterable<PersonRef> = people;
+const entries: IterableIterator<[PersonRef, PersonRef]> = people.entries();
+const numeric = new KeyedSet((value: number) => value);
+const numericKeys: KeyedSet<number, number> = numeric;
+const same: boolean = people.equals(new KeyedSet((ref: PersonRef) => ref.uid));
+void [readOnly, iterable, entries, numericKeys, same];
+
+// @ts-expect-error Person references require a UID.
+people.add({ name: "No identity" });
+// @ts-expect-error The default key type is string.
+new KeyedSet<PersonRef>((ref) => ref.uid.length);
+// @ts-expect-error Collections with different key types cannot be compared.
+people.equals(new KeyedSet<PersonRef, number>((ref) => ref.uid.length));
+// @ts-expect-error Constructor members must match the selector's input type.
+new KeyedSet((value: number) => value, ["wrong"]);
+// @ts-expect-error A read-only view cannot add members.
+readOnly.add({ uid: "c" });

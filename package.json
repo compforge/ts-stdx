@@ -12,6 +12,10 @@
     "./iter": {
       "types": "./dist/iter/index.d.ts",
       "import": "./dist/iter/index.js"
+    },
+    "./collections": {
+      "types": "./dist/collections/index.d.ts",
+      "import": "./dist/collections/index.js"
     }
   },
   "files": [
