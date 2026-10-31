@@ -55,3 +55,10 @@ people.equals(new KeyedSet<PersonRef, number>((ref) => ref.uid.length));
 new KeyedSet((value: number) => value, ["wrong"]);
 // @ts-expect-error A read-only view cannot add members.
 readOnly.add({ uid: "c" });
+
+const copied: KeyedSet<PersonRef> = people.clone((person) => ({ ...person }));
+const encoded: PersonRef[] = people.toJSON();
+const frozen: KeyedSet<PersonRef> = people.freeze();
+void [copied, encoded, frozen];
+// @ts-expect-error Copies must retain the member type expected by the key selector.
+people.clone(() => ({ name: "Missing identity" }));

@@ -74,12 +74,12 @@ people.equals(other); // true: same keys
   stable while stored, and use the same key semantics for sets compared with `equals`.
   Selector functions need not be the same function instance.
 - `equals` compares stored keys, ignoring iteration order and non-key fields. It
-  does not compare the full member bodies. Operations do not clone members.
+  does not compare the full member bodies. Membership operations do not clone members.
 - `ReadonlySet<T>` is available as a read-only TypeScript view; the collection is
   not a native Set instance. No native Set algebra methods are provided.
-- JSON and cloning boundaries belong to the caller: encode `[...people]`, validate
-  the decoded members, and reconstruct `new KeyedSet(keyOf, members)`. Direct JSON
-  serialization or `structuredClone` does not preserve this custom collection.
+- JSON emits the member array; validate decoded members and reconstruct
+  `new KeyedSet(keyOf, members)`. JSON does not preserve the selector or custom
+  class. Use `clone()` for a typed copy; native `structuredClone` loses the class.
   For a stable fingerprint, sort the encoded keys or members explicitly; traversal
   order is not collection identity.
 
@@ -97,3 +97,15 @@ npm pack --dry-run
 
 Checks run across the complete component. `make lint` checks formatting, implementation types and public API type cases.
 `make test` builds the package and runs Node's test runner. `npm pack` builds ESM and type declarations; the package exports the `./iter` and `./collections` subpaths.
+
+### Snapshots and JSON
+
+`set.clone()` copies membership and retains the key selector; pass a member copier
+(e.g. `set.clone(structuredClone)`) for independent member objects. Copies are mutable.
+`set.freeze()` (or `Object.freeze(set)`) prevents `add`, `delete`, and `clear`;
+member objects are not recursively frozen.
+
+`JSON.stringify(set)` emits a member array in iteration order. Reconstruct with
+`new KeyedSet(keyOf, parsedArray)`; JSON does not transport selector functions.
+Native `structuredClone` does not preserve custom classes: use `clone()` instead.
+Canonical ordering, recursive codecs, and domain validation belong to the caller.

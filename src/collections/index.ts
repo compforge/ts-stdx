@@ -24,6 +24,7 @@ export class KeyedSet<T, K = string> implements ReadonlySet<T> {
   }
 
   add(value: T): this {
+    this.assertMutable();
     this.#members.set(this.#keyOf(value), value);
     return this;
   }
@@ -33,11 +34,36 @@ export class KeyedSet<T, K = string> implements ReadonlySet<T> {
   }
 
   delete(value: T): boolean {
+    this.assertMutable();
     return this.#members.delete(this.#keyOf(value));
   }
 
   clear(): void {
+    this.assertMutable();
     this.#members.clear();
+  }
+
+  /** Freeze membership; callers own freezing member objects and selected keys. */
+  freeze(): this {
+    return Object.freeze(this);
+  }
+
+  private assertMutable(): void {
+    if (Object.isFrozen(this))
+      throw new TypeError("Cannot modify a frozen KeyedSet");
+  }
+
+  /** Mutable copy with the same key selector. A mapper can clone member objects. */
+  clone(copy: (value: T) => T = (value) => value): KeyedSet<T, K> {
+    return new KeyedSet(
+      this.#keyOf,
+      Array.from(this, (value) => copy(value)),
+    );
+  }
+
+  /** JSON contains members only; decode with the original key selector. */
+  toJSON(): T[] {
+    return Array.from(this);
   }
 
   /** Both sets must use the same key semantics; selector function identity need not match. */
