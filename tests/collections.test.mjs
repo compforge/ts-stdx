@@ -115,3 +115,29 @@ test("a failing key selector leaves the collection unchanged", () => {
   );
   assert.deepEqual([...people], [{ uid: "a" }]);
 });
+
+test("frozen membership rejects all mutations and clone remains independently mutable", () => {
+  const original = new KeyedSet(
+    (value) => value.id,
+    [{ id: "a", nested: { n: 1 } }],
+  );
+  const copy = original.clone(structuredClone);
+  original.freeze();
+  for (const mutate of [
+    () => original.add({ id: "b" }),
+    () => original.delete({ id: "a" }),
+    () => original.clear(),
+  ]) {
+    assert.throws(mutate, TypeError);
+  }
+  copy.add({ id: "b" });
+  [...copy][0].nested.n = 2;
+  assert.equal(original.size, 1);
+  assert.equal([...original][0].nested.n, 1);
+  assert.equal(copy.has({ id: "a" }), true);
+  assert.deepEqual(JSON.parse(JSON.stringify(original)), [
+    { id: "a", nested: { n: 1 } },
+  ]);
+  const frozen = Object.freeze(new KeyedSet((x) => x, [1]));
+  assert.throws(() => frozen.add(2), TypeError);
+});
