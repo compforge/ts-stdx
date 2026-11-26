@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isCredentialKey, maskCredentials } from "@compforge/ts-stdx/string";
+import {
+  isCredentialKey,
+  maskCredentials,
+  maskUrl,
+} from "@compforge/ts-stdx/string";
 
 test("field names use the same rules in text and structured consumers", () => {
   for (const key of [
@@ -59,5 +63,35 @@ test("retain a URL path containing ampersands and mask a quoted value in a trunc
   assert.equal(
     maskCredentials('token="not closed\nnext=value'),
     'token="[REDACTED]\nnext=value',
+  );
+});
+
+test("the standalone URL masker and free-text masker share DSN rules", () => {
+  const dsn = "redis://default:pass@redis:6379/0?region=cn&token=value";
+  const expected = "redis://[REDACTED]@redis:6379/0?region=cn&token=[REDACTED]";
+  assert.equal(maskUrl(dsn), expected);
+  assert.equal(maskCredentials("dial " + dsn), "dial " + expected);
+  assert.equal(
+    maskUrl("mysql://user:p%40ss@mysql:3306/db"),
+    "mysql://[REDACTED]@mysql:3306/db",
+  );
+  assert.equal(maskUrl("token=ordinary"), "token=ordinary");
+});
+
+test("URL options can mask every query value and discard fragments independently", () => {
+  const url = "HTTPS://store/asset?region=cn&custom=opaque&region=us#details";
+  const queryMasked =
+    "HTTPS://store/asset?region=[REDACTED]&custom=[REDACTED]&region=[REDACTED]";
+  assert.equal(
+    maskUrl(url, { maskAllQueryValues: true }),
+    queryMasked + "#details",
+  );
+  assert.equal(maskUrl(url, { stripFragment: true }), url.split("#")[0]);
+  assert.equal(
+    maskCredentials("request " + url, {
+      maskAllQueryValues: true,
+      stripFragment: true,
+    }),
+    "request " + queryMasked,
   );
 });

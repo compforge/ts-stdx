@@ -8,36 +8,61 @@ export function isCredentialKey(key: string): boolean {
   );
 }
 
-function maskUrl(url: string): string {
-  // Work on the original spelling to preserve ordinary parameters, escapes and duplicate keys.
-  const address = url.replace(/^(https?:\/\/)[^/?#\s]*@/i, "$1" + masked + "@");
-  const query = address.search(/[?#]/);
-  if (query < 0) return address;
-  return (
-    address.slice(0, query) +
-    address
-      .slice(query)
-      .replace(
-        /([?&#])([^?&#=]+)=([^&#]*)/g,
-        (field, delimiter: string, key: string) => {
-          let decoded = key;
-          try {
-            decoded = decodeURIComponent(key);
-          } catch {
-            // An invalid escape in one field must not prevent masking subsequent fields.
-          }
-          return isCredentialKey(decoded)
-            ? delimiter + key + "=" + masked
-            : field;
-        },
-      )
+export interface MaskUrlOptions {
+  /** Mask every query parameter value, including keys outside the credential rules. */
+  readonly maskAllQueryValues?: boolean;
+  /** Remove the URL fragment, including its delimiter. */
+  readonly stripFragment?: boolean;
+}
+
+function maskParameters(parameters: string, maskAll: boolean): string {
+  return parameters.replace(
+    /([?&#])([^?&#=]+)=([^&#]*)/g,
+    (field, delimiter: string, key: string) => {
+      let decoded = key;
+      try {
+        decoded = decodeURIComponent(key);
+      } catch {
+        // An invalid escape in one field must not prevent masking subsequent fields.
+      }
+      return maskAll || isCredentialKey(decoded)
+        ? delimiter + key + "=" + masked
+        : field;
+    },
   );
 }
 
+/** @spec Mask credentials in scheme:// URLs and DSNs while preserving host, path, and ordinary parameters by default. */
+export function maskUrl(url: string, options: MaskUrlOptions = {}): string {
+  const scheme = /^[a-z][a-z\d+.-]*:\/\//i.exec(url)?.[0];
+  if (!scheme) return url;
+  // Work on the original spelling to preserve escapes and duplicate keys.
+  const address =
+    scheme + url.slice(scheme.length).replace(/^[^/?#\s]*@/, masked + "@");
+  const fragmentStart = address.indexOf("#");
+  const end = fragmentStart < 0 ? address.length : fragmentStart;
+  const queryStart = address.indexOf("?");
+  const beforeFragment = address.slice(0, end);
+  const base =
+    queryStart < 0 || queryStart >= end
+      ? beforeFragment
+      : beforeFragment.slice(0, queryStart) +
+        maskParameters(
+          beforeFragment.slice(queryStart),
+          options.maskAllQueryValues ?? false,
+        );
+  return options.stripFragment
+    ? base
+    : base + maskParameters(address.slice(end), false);
+}
+
 /** Mask recognizable credential values in diagnostic text while preserving surrounding syntax. */
-export function maskCredentials(text: string): string {
+export function maskCredentials(
+  text: string,
+  urlOptions?: MaskUrlOptions,
+): string {
   const token =
-    /\bhttps?:\/\/[^\s"'<>]+|\b(Bearer|Basic)([ \t]+)(?:\[REDACTED\]|[a-z0-9._~+/=-]+)|\b([\w.-]+)(["']?[ \t]*[:=][ \t]*)?/gi;
+    /\b[a-z][a-z\d+.-]*:\/\/[^\s"'<>]+|\b(Bearer|Basic)([ \t]+)(?:\[REDACTED\]|[a-z0-9._~+/=-]+)|\b([\w.-]+)(["']?[ \t]*[:=][ \t]*)?/gi;
   const value =
     /"(?:\\[^\r\n]|[^"\\\r\n])*(")?|'(?:\\[^\r\n]|[^'\\\r\n])*(')?|\[REDACTED\]|[^\s"',;}\]]+/y;
   let result = "";
@@ -48,7 +73,7 @@ export function maskCredentials(text: string): string {
     if (scheme) {
       replacement = scheme + space + masked;
     } else if (key === undefined) {
-      replacement = maskUrl(spelling);
+      replacement = maskUrl(spelling, urlOptions);
     } else {
       if (!separator || !isCredentialKey(key)) continue;
       value.lastIndex = token.lastIndex;

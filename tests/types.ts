@@ -63,7 +63,18 @@ void [copied, encoded, frozen];
 // @ts-expect-error Copies must retain the member type expected by the key selector.
 people.clone(() => ({ name: "Missing identity" }));
 
-import { maskCredentials, isCredentialKey } from "../src/string/index.js";
+import {
+  maskCredentials,
+  isCredentialKey,
+  maskUrl,
+  type MaskUrlOptions,
+} from "../src/string/index.js";
 const masked: string = maskCredentials("token=value");
 const credential: boolean = isCredentialKey("token");
-void [masked, credential];
+const urlOptions: MaskUrlOptions = {
+  maskAllQueryValues: true,
+  stripFragment: true,
+};
+const url: string = maskUrl("https://host/path", urlOptions);
+const diagnostic: string = maskCredentials("https://host/path", urlOptions);
+void [masked, credential, url, diagnostic];
