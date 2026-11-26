@@ -83,6 +83,20 @@ people.equals(other); // true: same keys
   For a stable fingerprint, sort the encoded keys or members explicitly; traversal
   order is not collection identity.
 
+## Credential masking
+
+Import `maskCredentials` from `@compforge/ts-stdx/string` to mask common credentials in diagnostic text.
+
+```ts
+import { maskCredentials, isCredentialKey } from "@compforge/ts-stdx/string";
+
+maskCredentials("GET https://store/a?region=cn&token=abc");
+// GET https://store/a?region=cn&token=[REDACTED]
+isCredentialKey("AWS_SECRET_ACCESS_KEY"); // true
+```
+
+The function recognizes HTTP(S) URL userinfo and credential parameters, Basic and Bearer credentials, and quoted or unquoted credential assignments. It preserves ordinary fields and URL spelling. Use `isCredentialKey` to apply the same name rules to structured records. Callers handle application-specific fields and opaque payloads.
+
 ## Development
 
 Use Node.js 22+ and npm:
@@ -96,7 +110,7 @@ npm pack --dry-run
 ```
 
 Checks run across the complete component. `make lint` checks formatting, implementation types and public API type cases.
-`make test` builds the package and runs Node's test runner. `npm pack` builds ESM and type declarations; the package exports the `./iter` and `./collections` subpaths.
+`make test` builds the package and runs Node's test runner. `npm pack` builds ESM and type declarations; the package exports the `./iter`, `./collections` and `./string` subpaths.
 
 ### Snapshots and JSON
 

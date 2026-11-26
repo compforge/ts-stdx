@@ -62,3 +62,8 @@ const frozen: KeyedSet<PersonRef> = people.freeze();
 void [copied, encoded, frozen];
 // @ts-expect-error Copies must retain the member type expected by the key selector.
 people.clone(() => ({ name: "Missing identity" }));
+
+import { maskCredentials, isCredentialKey } from "../src/string/index.js";
+const masked: string = maskCredentials("token=value");
+const credential: boolean = isCredentialKey("token");
+void [masked, credential];
