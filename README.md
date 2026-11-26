@@ -85,17 +85,25 @@ people.equals(other); // true: same keys
 
 ## Credential masking
 
-Import `maskCredentials` from `@compforge/ts-stdx/string` to mask common credentials in diagnostic text.
+Use `maskCredentials` for diagnostic text, `maskUrl` for a single URL or DSN, and `maskUrlsInText` to apply a URL policy to links embedded in text.
 
 ```ts
-import { maskCredentials, isCredentialKey } from "@compforge/ts-stdx/string";
+import {
+  maskCredentials,
+  isCredentialKey,
+  maskUrl,
+} from "@compforge/ts-stdx/string";
 
 maskCredentials("GET https://store/a?region=cn&token=abc");
 // GET https://store/a?region=cn&token=[REDACTED]
+maskUrl("redis://default:pass@redis:6379/0");
+// redis://[REDACTED]@redis:6379/0
 isCredentialKey("AWS_SECRET_ACCESS_KEY"); // true
 ```
 
-The function recognizes HTTP(S) URL userinfo and credential parameters, Basic and Bearer credentials, and quoted or unquoted credential assignments. It preserves ordinary fields and URL spelling. Use `isCredentialKey` to apply the same name rules to structured records. Callers handle application-specific fields and opaque payloads.
+`maskUrl` and `maskUrlsInText` mask userinfo and named credential values in `scheme://` URLs and DSNs. Pass `{ maskAllQueryValues: true }` to mask every query value and `{ stripFragment: true }` to drop fragments. By default, ordinary URL parameters and fragment text are preserved.
+
+`maskCredentials` also recognizes Basic and Bearer credentials and quoted or unquoted credential assignments. Use `isCredentialKey` to apply the same name rules to structured records.
 
 ## Development
 
