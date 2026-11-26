@@ -9,6 +9,7 @@ TypeScript 标准库扩展库，与 go-stdx 保持相同的收录方向：提供
 
 ```text
 src/
+  string/index.ts      # 诊断文本中的常见凭据遮盖与字段名识别
   collections/index.ts # 按自定义 key 判断成员身份的 KeyedSet
   iter/index.ts       # 分页 loader 与原生异步生成器
 tests/
