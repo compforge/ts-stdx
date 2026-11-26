@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { loadingIterator } from "@compforge/ts-stdx/iter";
+import { batchIterator, loadingIterator } from "@compforge/ts-stdx/iter";
 
 async function collect(iterator) {
   const items = [];
@@ -212,4 +212,104 @@ test("cancellation while awaiting an item prevents that item from being yielded"
   resolveItem(1);
   await assert.rejects(next, (error) => error === reason);
   assert.deepEqual(await collect(iterator), []);
+});
+
+test("batchIterator groups across pages and yields only nonempty batches", async () => {
+  for (const [values, expected] of [
+    [[], []],
+    [
+      [1, 2, 3, 4],
+      [
+        [1, 2],
+        [3, 4],
+      ],
+    ],
+    [
+      [1, 2, 3],
+      [[1, 2], [3]],
+    ],
+  ]) {
+    async function* source() {
+      yield* values;
+    }
+    assert.deepEqual(await collect(batchIterator(source(), 2)), expected);
+  }
+  const pages = [[1], [2, 3]];
+  const source = loadingIterator(async () => ({
+    items: pages.shift(),
+    hasMore: pages.length > 0,
+  }));
+  assert.deepEqual(await collect(batchIterator(source, 2)), [[1, 2], [3]]);
+});
+
+test("batchIterator validates the size before opening the source", async () => {
+  const source = {
+    [Symbol.asyncIterator]() {
+      assert.fail("unexpected source access");
+    },
+  };
+  for (const size of [0, -1, 0.5, Infinity, NaN, Number.MAX_SAFE_INTEGER + 1]) {
+    await assert.rejects(batchIterator(source, size).next(), RangeError);
+  }
+  const signal = AbortSignal.abort(new Error("stopped before opening"));
+  await assert.rejects(
+    batchIterator(source, 1, signal).next(),
+    (error) => error === signal.reason,
+  );
+});
+
+test("batchIterator closes the source on break without reading ahead", async () => {
+  let closed = false;
+  async function* source() {
+    try {
+      yield 1;
+      yield 2;
+      assert.fail("read past the first batch");
+    } finally {
+      closed = true;
+    }
+  }
+  for await (const batch of batchIterator(source(), 2)) {
+    assert.deepEqual(batch, [1, 2]);
+    break;
+  }
+  assert.ok(closed);
+});
+
+test("batchIterator propagates source errors and drops partial batches", async () => {
+  const failure = new Error("source failed");
+  async function* source() {
+    yield 1;
+    throw failure;
+  }
+  const batches = batchIterator(source(), 2);
+  await assert.rejects(batches.next(), (error) => error === failure);
+});
+
+test("batchIterator observes cancellation before the next pull", async () => {
+  const controller = new AbortController();
+  async function* source() {
+    yield 1;
+    assert.fail("unexpected pull");
+  }
+  const batches = batchIterator(source(), 1, controller.signal);
+  assert.deepEqual((await batches.next()).value, [1]);
+  controller.abort();
+  await assert.rejects(
+    batches.next(),
+    (error) => error === controller.signal.reason,
+  );
+});
+
+test("batchIterator discards a pending batch when the final read is cancelled", async () => {
+  const controller = new AbortController();
+  async function* source() {
+    yield 1;
+    controller.abort();
+  }
+  const batches = batchIterator(source(), 2, controller.signal);
+  await assert.rejects(
+    batches.next(),
+    (error) => error === controller.signal.reason,
+  );
 });
