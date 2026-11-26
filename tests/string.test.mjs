@@ -4,6 +4,7 @@ import {
   isCredentialKey,
   maskCredentials,
   maskUrl,
+  maskUrlsInText,
 } from "@compforge/ts-stdx/string";
 
 test("field names use the same rules in text and structured consumers", () => {
@@ -88,10 +89,10 @@ test("URL options can mask every query value and discard fragments independently
   );
   assert.equal(maskUrl(url, { stripFragment: true }), url.split("#")[0]);
   assert.equal(
-    maskCredentials("request " + url, {
+    maskUrlsInText("request token=ordinary " + url, {
       maskAllQueryValues: true,
       stripFragment: true,
     }),
-    "request " + queryMasked,
+    "request token=ordinary " + queryMasked,
   );
 });

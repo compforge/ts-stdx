@@ -56,13 +56,20 @@ export function maskUrl(url: string, options: MaskUrlOptions = {}): string {
     : base + maskParameters(address.slice(end), false);
 }
 
+const urlsInText = /\b[a-z][a-z\d+.-]*:\/\/[^\s"'<>]+/gi;
+
+/** Apply a URL masking policy to the URLs embedded in text. */
+export function maskUrlsInText(text: string, options?: MaskUrlOptions): string {
+  return text.replace(urlsInText, (url) => maskUrl(url, options));
+}
+
 /** Mask recognizable credential values in diagnostic text while preserving surrounding syntax. */
-export function maskCredentials(
-  text: string,
-  urlOptions?: MaskUrlOptions,
-): string {
-  const token =
-    /\b[a-z][a-z\d+.-]*:\/\/[^\s"'<>]+|\b(Bearer|Basic)([ \t]+)(?:\[REDACTED\]|[a-z0-9._~+/=-]+)|\b([\w.-]+)(["']?[ \t]*[:=][ \t]*)?/gi;
+export function maskCredentials(text: string): string {
+  const token = new RegExp(
+    urlsInText.source +
+      String.raw`|\b(Bearer|Basic)([ \t]+)(?:\[REDACTED\]|[a-z0-9._~+/=-]+)|\b([\w.-]+)(["']?[ \t]*[:=][ \t]*)?`,
+    "gi",
+  );
   const value =
     /"(?:\\[^\r\n]|[^"\\\r\n])*(")?|'(?:\\[^\r\n]|[^'\\\r\n])*(')?|\[REDACTED\]|[^\s"',;}\]]+/y;
   let result = "";
@@ -73,7 +80,7 @@ export function maskCredentials(
     if (scheme) {
       replacement = scheme + space + masked;
     } else if (key === undefined) {
-      replacement = maskUrl(spelling, urlOptions);
+      replacement = maskUrl(spelling);
     } else {
       if (!separator || !isCredentialKey(key)) continue;
       value.lastIndex = token.lastIndex;

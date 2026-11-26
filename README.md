@@ -85,7 +85,7 @@ people.equals(other); // true: same keys
 
 ## Credential masking
 
-Use `maskCredentials` for diagnostic text and `maskUrl` for a single URL or DSN.
+Use `maskCredentials` for diagnostic text, `maskUrl` for a single URL or DSN, and `maskUrlsInText` to apply a URL policy to links embedded in text.
 
 ```ts
 import {
@@ -101,7 +101,7 @@ maskUrl("redis://default:pass@redis:6379/0");
 isCredentialKey("AWS_SECRET_ACCESS_KEY"); // true
 ```
 
-Both functions mask URL userinfo and named credential values in `scheme://` URLs and DSNs. Pass `{ maskAllQueryValues: true }` to mask every query value and `{ stripFragment: true }` to drop fragments. By default, ordinary parameters and fragments are preserved with their original spelling.
+`maskUrl` and `maskUrlsInText` mask userinfo and named credential values in `scheme://` URLs and DSNs. Pass `{ maskAllQueryValues: true }` to mask every query value and `{ stripFragment: true }` to drop fragments. By default, ordinary URL parameters and fragment text are preserved.
 
 `maskCredentials` also recognizes Basic and Bearer credentials and quoted or unquoted credential assignments. Use `isCredentialKey` to apply the same name rules to structured records.
 
