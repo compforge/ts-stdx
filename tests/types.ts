@@ -1,4 +1,8 @@
-import { loadingIterator, type PageLoader } from "../src/iter/index.js";
+import {
+  batchIterator,
+  loadingIterator,
+  type PageLoader,
+} from "../src/iter/index.js";
 
 const page: PageLoader<number> = async (signal) => {
   const forwarded: AbortSignal | undefined = signal;
@@ -81,3 +85,9 @@ const diagnostic: string = maskUrlsInText("GET https://host/path", urlOptions);
 // @ts-expect-error URL policies are options on the URL masking functions.
 maskCredentials("token=value", urlOptions);
 void [masked, credential, url, diagnostic];
+
+const batches: AsyncGenerator<number[], void, unknown> = batchIterator(
+  iterator,
+  2,
+);
+void batches;

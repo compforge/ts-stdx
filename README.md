@@ -40,6 +40,29 @@ An optional second argument forwards an `AbortSignal` to every loader invocation
 
 The behavior follows [go-stdx's loading iterator](https://github.com/compforge/go-stdx/pull/31), expressed through native TypeScript async iteration.
 
+## Batch iterator
+
+`batchIterator(source, size, signal?)` groups an `AsyncIterable<T>` into arrays
+of at most `size` items, preserving order across source pages. Pass a positive
+safe integer. Each full batch is yielded immediately. Normal completion yields
+any remaining items.
+
+```ts
+import { batchIterator, loadingIterator } from "@compforge/ts-stdx/iter";
+
+for await (const batch of batchIterator(
+  loadingIterator(loadPage, signal),
+  100,
+  signal,
+)) {
+  await saveBatch(batch);
+}
+```
+
+Ending the loop early closes the active source iterator. A source error or
+cancellation discards the pending batch and propagates the original error.
+Pass the same signal to the source to interrupt an in-flight read.
+
 ## Keyed set
 
 `KeyedSet<T, K = string>` identifies members by a caller-selected key instead of

@@ -37,3 +37,33 @@ export async function* loadingIterator<T>(
     if (!hasMore) return;
   }
 }
+
+/**
+ * Group consecutive items from an async source into batches of at most size.
+ * @spec A full batch is yielded before pulling again. Only normal completion flushes a partial batch.
+ * @see {@link component://README.md#batch-iterator}
+ * @case tests/iter.test.mjs
+ */
+export async function* batchIterator<T>(
+  source: AsyncIterable<T>,
+  size: number,
+  signal?: AbortSignal,
+): AsyncGenerator<T[], void, unknown> {
+  if (!Number.isSafeInteger(size) || size < 1) {
+    throw new RangeError("size must be a positive safe integer");
+  }
+
+  signal?.throwIfAborted();
+  let batch: T[] = [];
+  for await (const item of source) {
+    signal?.throwIfAborted();
+    batch.push(item);
+    if (batch.length === size) {
+      yield batch;
+      signal?.throwIfAborted();
+      batch = [];
+    }
+  }
+  signal?.throwIfAborted();
+  if (batch.length > 0) yield batch;
+}
